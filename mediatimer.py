@@ -1,9 +1,5 @@
 from ctypes import windll
 
-ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(), 0x80)
-ctypes.windll.winmm.timeBeginPeriod(1)
-atexit.register(lambda: ctypes.windll.winmm.timeEndPeriod(1))
-
 process = windll.kernel32.GetCurrentProcess()
 
 GetPriorityClass = windll.kernel32.GetPriorityClass
@@ -19,8 +15,8 @@ class MediaTimer(object):
     def __enter__(self):
         timeBeginPeriod(self.precision)
         self.old_priority = GetPriorityClass(process)
-        SetPriorityClass(self.priority)
+        SetPriorityClass(process, self.priority)
     
     def __exit__(self, exc_type, exc_value, traceback):
         timeEndPeriod(self.precision)
-        SetPriorityClass(self.old_priority)
+        SetPriorityClass(process, self.old_priority)
