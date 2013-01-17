@@ -140,6 +140,8 @@ instruments = {
     'Piano': 0,
     'Phone': 124,
     'Telephone': 124,
+    'String Ensemble': 48,
+    'Strings': 48,
 }
 dynamics = {'m': 0x40, 'mf': 0x48, 'f': 0x50, 'ff': 0x60, 'fff': 0x70, 'mp': 0x38, 'p': 0x30, 'pp': 0x28, 'p': 0x20}
 
