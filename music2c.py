@@ -1,4 +1,5 @@
 from beep import table
+from musicparser import Parser
 
 class MusicToC(Parser):
     def __init__(self, *args, **kwargs):
@@ -15,10 +16,13 @@ class MusicToC(Parser):
         pass
     
     def say(self, new):
-        print '\tprintf("%%s", "%s");' % new.replace('"', '\\"')
+        print '\tprintf("%%s", "%s");' % (new.replace('"', '\\"')
+                                             .replace('\n', '\\n')
+                                             .replace('\b', '\\b')
+                                             .replace('\r', '\\r'))
     
     def dynamic(self, new):
-        self.player.dynamic(new)
+        pass
     
     def play(self, head, data):
         try:
@@ -34,10 +38,9 @@ class MusicToC(Parser):
         
         if head.startswith('0'):
             print '\tSleep(%d);' % length
-            time.sleep(length/1000.)
             return
         
-        print '\tBeep(%d, %d)' % (int(table[head]), length)
+        print '\tBeep(%d, %d);' % (int(table[head]), length)
     
     def run(self):
         print '#include <windows.h>'
@@ -45,3 +48,19 @@ class MusicToC(Parser):
         print 'int main(int argc, char *argv[]) {'
         super(MusicToC, self).run()
         print '}'
+
+def main():
+    import sys
+    import codecs
+    sys.stdout = codecs.getwriter('mbcs')(sys.stdout, 'backslashreplace')
+    
+    for file in sys.argv[1:]:
+        try:
+            converter = MusicToC(open(file))
+        except IOError as e:
+            print e.message, 'on opening:', file
+        else:
+            converter.run()
+
+if __name__ == '__main__':
+    main()

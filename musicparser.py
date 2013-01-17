@@ -53,7 +53,7 @@ class Parser(object):
                 if line == '\n' or line.startswith((';', '#', '$', '!', '%', '/')):
                     continue
                 try:
-                    self.line(line.rstrip('\n'))
+                    self.line(line.rstrip('\n').decode('utf-8', 'ignore'))
                 except Exception:
                     traceback.print_exc()
                     fails += 1
