@@ -10,7 +10,7 @@ from midi import MIDI
 
 class Player(Parser):
     def __init__(self, *args, **kwargs):
-        self.file = file
+        super(Player, self).__init__(*args, **kwargs)
         self.player = Beeper()
         self.speed = 2000
         self.noteinfo = True
