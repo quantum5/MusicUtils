@@ -47,7 +47,6 @@ class Parser(object):
     
     def run(self):
         fails = 0
-        self.queue = Queue()
         
         with self.file as file:
             for line in file:
