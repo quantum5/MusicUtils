@@ -41,7 +41,7 @@ class Player(Parser):
     def dynamic(self, new):
         self.player.dynamic(new)
     
-    def play(self, new):
+    def play(self, head, data):
         try:
             length = float(data.rstrip('+'))
         except ValueError:

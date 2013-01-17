@@ -42,7 +42,7 @@ class Parser(object):
     def dynamic(self, new):
         raise NotImplementedError
     
-    def play(self, new):
+    def play(self, head, data):
         raise NotImplementedError
     
     def run(self):
