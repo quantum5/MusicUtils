@@ -32,7 +32,7 @@ class MusicToMidiC(Parser):
         pass
     
     def say(self, new):
-        print >>self.stream, '\tprint >>self.stream,f("%%s", "%s");' % (new.replace('"', '\\"')
+        print >>self.stream, '\tprintf("%%s", "%s");' % (new.replace('"', '\\"')
                                              .replace('\n', '\\n')
                                              .replace('\b', '\\b')
                                              .replace('\r', '\\r'))
