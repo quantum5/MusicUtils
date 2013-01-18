@@ -52,11 +52,10 @@ class MusicToC(Parser):
 def main():
     import sys
     import codecs
-    sys.stdout = codecs.getwriter('mbcs')(sys.stdout, 'backslashreplace')
-    
+
     for file in sys.argv[1:]:
         try:
-            converter = MusicToC(open(file))
+            converter = MusicToC(open(file), codecs.open(file.rsplit('.', 1)[0]+'.c', 'wb', 'utf-8'))
         except IOError as e:
             print e.message, 'on opening:', file
         else:
