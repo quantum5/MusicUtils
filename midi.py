@@ -153,7 +153,7 @@ class MIDI(object):
             raise RuntimeError("Can't find MIDI device")
         self.force = 0x40
     
-    def type(self, data):
+    def type(self, data, chan=0):
         try:
             id = int(data, 0)
         except ValueError:
@@ -162,7 +162,7 @@ class MIDI(object):
             except KeyError:
                 raise ValueError('Invalid Instrument')
         if 0 < id < 0x80:
-            midiOutShortMsg(self.handle, id << 8 | 0xC0)
+            midiOutShortMsg(self.handle, id << 8 | 0xC0 | chan)
         else:
             raise ValueError('Instrument %s out of range' % data)
     
@@ -179,12 +179,29 @@ class MIDI(object):
         else:
             raise ValueError('Dynamic %s out of range' % dynamic)
     
-    def __call__(self, note, length):
-        if note not in miditable:
+    def _getnote(self, note):
+        try:
+            return miditable[note]
+        except KeyError:
             raise ValueError("%s doesn't exist in my world" % note)
-        midiOutShortMsg(self.handle, self.force << 16 | miditable[note] << 8 | 0x90)
+    
+    def _on(self, channel, note):
+        midiOutShortMsg(self.handle, self.force << 16 | note << 8 | 0x90 | channel)
+    
+    def _off(self, channel, note):
+        midiOutShortMsg(self.handle, note << 8 | 0x90 | channel)
+    
+    def on(self, channel, note):
+        self._on(channel, self._getnote(note))
+    
+    def off(self, channel, note):
+        self._off(channel, self._getnote(note))
+    
+    def __call__(self, note, length):
+        note = self._getnote(note)
+        self._on(0, note)
         time.sleep(length/1000.)
-        midiOutShortMsg(self.handle, miditable[note] << 8 | 0x90)
+        self._off(0, note)
         time.sleep(0.05)
     
     def close(self):

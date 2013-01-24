@@ -15,7 +15,12 @@ class Player(Parser):
         self.speed = 2000
         self.noteinfo = True
     
-    def instrument(self, new):
+    def instrument(self, new, channel):
+        if channel != 0:
+            if not isinstance(self.player, MIDI):
+                self.player = MIDI()
+            self.player.type(new, channel)
+            return
         self.player.close()
         if new.strip().lower().startswith('beep'):
             self.player = Beeper()
@@ -38,8 +43,14 @@ class Player(Parser):
     def say(self, new):
         self.write(new, newline=False)
     
-    def dynamic(self, new):
+    def dynamic(self, new, channel):
         self.player.dynamic(new)
+    
+    def noteon(self, channel, note):
+        self.player.on(channel, note)
+    
+    def noteoff(self, channel, note):
+        self.player.off(channel, note)
     
     def play(self, head, data):
         try:
@@ -69,12 +80,12 @@ class Player(Parser):
             if item is None:
                 return
             try:
-                sys.stdout.write(item.decode('utf-8', 'replace'))
+                sys.stdout.write(item)
             except IOError:
                 pass
     
     def write(self, *args, **kwargs):
-        self.queue.put(kwargs.get('sep', '').join(str(i) for i in args))
+        self.queue.put(kwargs.get('sep', '').join(i if isinstance(i, unicode) else unicode(i) for i in args))
         if kwargs.get('newline', True):
             self.queue.put('\n')
     

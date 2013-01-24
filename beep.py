@@ -17,6 +17,12 @@ class Beeper(object):
     def close(self):
         pass
     
+    def on(self, channel, note):
+        pass
+    
+    def off(self, channel, note):
+        pass
+    
     def __call__(self, note, length):
         if note not in table:
             raise ValueError("%s doesn't exist in my world" % note)

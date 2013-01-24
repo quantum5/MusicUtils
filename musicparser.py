@@ -10,12 +10,18 @@ class Parser(object):
         data = data.lstrip(' ')
         head = head.upper()
         if head == 'INSTRUMENT':
-            self.instrument(data)
+            if ':' in data:
+                channel, data = (i.strip() for i in data.split(':', 1))
+                try:
+                    channel = int(channel, 0)
+                except ValueError:
+                    print 'Bad channel id:', channel
+                    channel = 0
+            else:
+                channel = 0
+            self.instrument(data, channel)
         elif head == 'SPEED':
-            try:
-                self.tempo(float(data))
-            except ValueError as e:
-                print 'Bad Speed Indicater:', e.message
+            self.tempo(float(data))
         elif head == 'LYRICS':
             self.lyrics(data.lower() in ('on', 'yes', 'da', '1', 'true'))
         elif head == 'L':
@@ -23,11 +29,28 @@ class Parser(object):
                          .replace('\\b', '\b')
                          .replace('\\r', '\r'))
         elif head == 'V':
-            self.dynamic(data)
+            if ':' in data:
+                channel, data = (i.strip() for i in data.split(':', 1))
+                try:
+                    channel = int(channel, 0)
+                except ValueError:
+                    print 'Bad channel id:', channel
+                    channel = 0
+            else:
+                channel = 0
+            self.dynamic(data, channel)
+        elif head in ('ON', 'OFF'):
+            channel, note = (i.strip() for i in data.split(':', 1))
+            try:
+                channel = int(channel, 0)
+            except ValueError:
+                print 'Bad channel id:', channel
+            else:
+                (self.noteon if head == 'ON' else self.noteoff)(channel, note)
         else:
             self.play(head, data)
     
-    def instrument(self, new):
+    def instrument(self, new, channel):
         raise NotImplementedError
     
     def tempo(self, new):
@@ -39,10 +62,16 @@ class Parser(object):
     def say(self, new):
         raise NotImplementedError
     
-    def dynamic(self, new):
+    def dynamic(self, new, channel):
         raise NotImplementedError
     
     def play(self, head, data):
+        raise NotImplementedError
+    
+    def noteon(self, channel, note):
+        raise NotImplementedError
+    
+    def noteoff(self, channel, note):
         raise NotImplementedError
     
     def run(self):
