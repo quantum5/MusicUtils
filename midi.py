@@ -198,11 +198,21 @@ class MIDI(object):
         self._off(channel, self._getnote(note))
     
     def __call__(self, note, length):
-        note = self._getnote(note)
-        self._on(0, note)
-        time.sleep(length/1000.)
-        self._off(0, note)
-        time.sleep(0.05)
+        if ',' in note:
+            notes = [self._getnote(i.strip()) for i in note.split(',')]
+            for note in notes:
+                self._on(0, note)
+            time.sleep(length/1000.)
+            notes.reverse()
+            for note in notes:
+                self._off(0, note)
+            time.sleep(0.05)
+        else:
+            note = self._getnote(note)
+            self._on(0, note)
+            time.sleep(length/1000.)
+            self._off(0, note)
+            time.sleep(0.05)
     
     def close(self):
         midiOutClose(self.handle)
