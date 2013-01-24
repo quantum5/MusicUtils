@@ -161,7 +161,7 @@ class MIDI(object):
                 id = instruments[data]
             except KeyError:
                 raise ValueError('Invalid Instrument')
-        if 0 < id < 0x80:
+        if 0 <= id < 0x80:
             midiOutShortMsg(self.handle, id << 8 | 0xC0 | chan)
         else:
             raise ValueError('Instrument %s out of range' % data)
