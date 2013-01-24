@@ -24,6 +24,8 @@ class Beeper(object):
         pass
     
     def __call__(self, note, length):
+        if ',' in note:
+            note = note.split(',')[0].strip()
         if note not in table:
             raise ValueError("%s doesn't exist in my world" % note)
         Beep(int(round(table[note])), int(round(length)))
