@@ -4,11 +4,13 @@ import traceback
 class Parser(object):
     def __init__(self, file):
         self.file = file
+        self.filter = {'$', '%', '^', '&'}
+        self.strip = set()
     
     def line(self, line):
-        head, data = line.split(':', 1)
+        ohead, data = line.split(':', 1)
         data = data.lstrip(' ')
-        head = head.upper()
+        head = ohead.upper()
         if head == 'INSTRUMENT':
             if ':' in data:
                 channel, data = (i.strip() for i in data.split(':', 1))
@@ -48,7 +50,7 @@ class Parser(object):
             else:
                 (self.noteon if head == 'ON' else self.noteoff)(channel, note)
         else:
-            self.play(head, data)
+            self.play(ohead, data)
     
     def instrument(self, new, channel):
         raise NotImplementedError
@@ -79,10 +81,16 @@ class Parser(object):
         
         with self.file as file:
             for line in file:
-                if line == '\n' or line.startswith((';', '#', '$', '!', '%', '/')):
+                if line == '\n' or line.startswith((';', '#')):
                     continue
+                if line[0] in self.filter:
+                    continue
+                if line[0] in self.strip:
+                    line = line[1:].lstrip()
                 try:
                     self.line(line.rstrip('\n').decode('utf-8', 'ignore'))
+                except KeyboardInterrupt:
+                    print '^C Interrupted'
                 except Exception:
                     traceback.print_exc()
                     fails += 1

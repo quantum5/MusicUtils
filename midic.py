@@ -9,7 +9,7 @@ class MusicToMidiC(Parser):
         self.force = 0x40
         self.stream = stream or sys.stdout
     
-    def instrument(self, new):
+    def instrument(self, new, channel):
         try:
             try:
                 id = int(new, 0)
@@ -19,7 +19,7 @@ class MusicToMidiC(Parser):
                 except KeyError:
                     raise ValueError('Invalid Instrument')
             if 0 < id < 0x80:
-                print >>self.stream, '\tmidiOutShortMsg(h, 0x%x);'%(id << 8 | 0xC0)
+                print >>self.stream, '\tmidiOutShortMsg(h, 0x%x);'%(id << 8 | 0xC0 | channel)
             else:
                 raise ValueError('Instrument %s out of range' % new)
         except ValueError as e:
@@ -37,7 +37,7 @@ class MusicToMidiC(Parser):
                                              .replace('\b', '\\b')
                                              .replace('\r', '\\r'))
     
-    def dynamic(self, new):
+    def dynamic(self, new, channel):
         try:
             force = int(new, 0)
         except ValueError:
@@ -76,6 +76,18 @@ class MusicToMidiC(Parser):
 \tmidiOutShortMsg(h, 0x%x);
 \tSleep(10);''' % (self.force << 16 | miditable[head] << 8 | 0x90, length,
                  miditable[head] << 8 | 0x90)
+
+    def noteon(self, channel, note):
+        if note not in miditable:
+            print >>self.stream, "// %s doesn't exist in my world" % note
+            return
+        print >>self.stream, "midiOutShortMsg(h, 0x%x);" % (self.force << 16 | miditable[note] << 8 | 0x90 | channel)
+    
+    def noteoff(self, channel, note):
+        if note not in miditable:
+            print >>self.stream, "// %s doesn't exist in my world" % note
+            return
+        print >>self.stream, "midiOutShortMsg(h, 0x%x);" % (miditable[note] << 8 | 0x90 | channel)
 
     def run(self):
         print >>self.stream, '#include <windows.h>'

@@ -24,8 +24,16 @@ class Player(Parser):
         self.player.close()
         if new.strip().lower().startswith('beep'):
             self.player = Beeper()
+            self.filter.discard('%')
+            self.strip.discard('$')
+            self.filter.add('$')
+            self.strip.add('%')
         else:
             self.player = MIDI()
+            self.filter.discard('$')
+            self.strip.discard('%')
+            self.filter.add('%')
+            self.strip.add('$')
             try:
                 self.player.type(new)
             except ValueError as e:
@@ -33,6 +41,10 @@ class Player(Parser):
                 print e.message
                 self.player.close()
                 self.player = Beeper()
+                self.filter.discard('%')
+                self.strip.discard('$')
+                self.filter.add('$')
+                self.strip.add('%')
     
     def tempo(self, new):
         self.speed = new
@@ -104,7 +116,7 @@ class Player(Parser):
 def main():
     import sys
     import codecs
-    sys.stdout = codecs.getwriter('mbcs')(sys.stdout, 'backslashreplace')
+    sys.stdout = codecs.getwriter(sys.stdout.encoding)(sys.stdout, 'backslashreplace')
     
     for file in sys.argv[1:]:
         try:

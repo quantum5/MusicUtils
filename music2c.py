@@ -2,11 +2,18 @@ from beep import table
 from musicparser import Parser
 
 class MusicToC(Parser):
-    def __init__(self, *args, **kwargs):
-        super(MusicToC, self).__init__(*args, **kwargs)
+    def __init__(self, source, target):
+        super(MusicToC, self).__init__(source)
         self.speed = 2000
+        self.target = target
     
-    def instrument(self, new):
+    def noteon(self, channel, note):
+        pass
+    
+    def noteoff(self, channel, note):
+        pass
+    
+    def instrument(self, new, channel):
         pass
     
     def tempo(self, new):
@@ -16,19 +23,19 @@ class MusicToC(Parser):
         pass
     
     def say(self, new):
-        print '\tprintf("%%s", "%s");' % (new.replace('"', '\\"')
-                                             .replace('\n', '\\n')
-                                             .replace('\b', '\\b')
-                                             .replace('\r', '\\r'))
+        print>>self.target, '\tprintf("%%s", "%s");' % (new.replace('"', '\\"')
+                                                           .replace('\n', '\\n')
+                                                           .replace('\b', '\\b')
+                                                           .replace('\r', '\\r'))
     
-    def dynamic(self, new):
+    def dynamic(self, new, channel):
         pass
     
     def play(self, head, data):
         try:
             length = float(data.rstrip('+'))
         except ValueError:
-            print '//', data, 'not known'
+            print>>self.target, '//', data, 'not known'
             return
         length = self.speed / length
         
@@ -37,17 +44,19 @@ class MusicToC(Parser):
             length *= 1.5
         
         if head.startswith('0'):
-            print '\tSleep(%d);' % length
-            return
-        
-        print '\tBeep(%d, %d);' % (int(table[head]), length)
+            print>>self.target, '\tSleep(%d);' % length
+        else:
+            print>>self.target, '\tBeep(%d, %d);' % (int(table[head.split(',')[0]]), length)
     
     def run(self):
-        print '#include <windows.h>'
-        print
-        print 'int main(int argc, char *argv[]) {'
+        print>>self.target, '#include <windows.h>'
+        print>>self.target
+        print>>self.target, 'int main(int argc, char *argv[]) {'
+        print>>self.target, '\ttimeBeginPeriod(1);'
+        print>>self.target, '\tSetPriorityClass(GetCurrentProcess(), 0x80);'
         super(MusicToC, self).run()
-        print '}'
+        print>>self.target, '\ttimeEndPeriod(1);'
+        print>>self.target, '}'
 
 def main():
     import sys
