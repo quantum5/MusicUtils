@@ -1,6 +1,8 @@
 from midi import miditable, instruments, dynamics
 from musicparser import Parser
+
 import sys
+from textwrap import dedent
 
 class MusicToMidiC(Parser):
     def __init__(self, file, stream=None, rawapi=False):
@@ -125,129 +127,134 @@ class MusicToMidiC(Parser):
             print >>self.stream, self.stream.name,
             print >>self.stream, '/link /nodefaultlib /entry:RawEntry',
             print >>self.stream, '/subsystem:CONSOLE kernel32.lib winmm.lib */'
-        print >>self.stream, '''\
-#include <windows.h>
-#include <wchar.h>
-#pragma comment(lib, "winmm.lib")
-HMIDIOUT handle;
-HANDLE worker;
-BOOL running = TRUE;
+        print >>self.stream, dedent('''\
+            #include <windows.h>
+            #include <wchar.h>
+            #pragma comment(lib, "winmm.lib")
+            HMIDIOUT handle;
+            HANDLE worker;
+            BOOL running = TRUE;
 
-DWORD WINAPI ThreadProc(LPVOID lpParameter);
-BOOL WINAPI HandlerRoutine(DWORD dwCtrlType);
-'''
+            DWORD WINAPI ThreadProc(LPVOID lpParameter);
+            BOOL WINAPI HandlerRoutine(DWORD dwCtrlType);
+            '''
+        )
         if self.rawapi:
             print >>self.stream, 'DWORD WINAPI RawEntry()'
         else:
             print >>self.stream, 'int main(int argc, char *argv[])'
         print >>self.stream, '{'
-        print >>self.stream, '''\
-    midiOutOpen(&handle, 0, 0, 0, CALLBACK_NULL);
-    midiOutSetVolume(handle, 0x7FFF7FFF);
-    SetPriorityClass(GetCurrentProcess(), 0x80);
-    worker = CreateThread(NULL, 0, ThreadProc, NULL, 0, NULL);
-    SetConsoleCtrlHandler(HandlerRoutine, TRUE);
-    WaitForSingleObject(worker, INFINITE);
-    ExitProcess(1);
-}
+        print >>self.stream, dedent('''\
+                midiOutOpen(&handle, 0, 0, 0, CALLBACK_NULL);
+                midiOutSetVolume(handle, 0x7FFF7FFF);
+                SetPriorityClass(GetCurrentProcess(), 0x80);
+                worker = CreateThread(NULL, 0, ThreadProc, NULL, 0, NULL);
+                SetConsoleCtrlHandler(HandlerRoutine, TRUE);
+                WaitForSingleObject(worker, INFINITE);
+                ExitProcess(1);
+            }
 
-BOOL WINAPI HandlerRoutine(DWORD dwCtrlType) {
-    switch (dwCtrlType) {
-    case CTRL_C_EVENT:
-        if (running) {
-            SuspendThread(worker);
-            midiOutSetVolume(handle, 0x00000000);
-        } else {
-            midiOutSetVolume(handle, 0x7FFF7FFF);
-            ResumeThread(worker);
-        }
-        running = !running;
-        return TRUE;
-    default:
-        ExitProcess(0);
-        return FALSE;
-    }
-}
+            BOOL WINAPI HandlerRoutine(DWORD dwCtrlType) {
+                switch (dwCtrlType) {
+                case CTRL_C_EVENT:
+                    if (running) {
+                        SuspendThread(worker);
+                        midiOutSetVolume(handle, 0x00000000);
+                    } else {
+                        midiOutSetVolume(handle, 0x7FFF7FFF);
+                        ResumeThread(worker);
+                    }
+                    running = !running;
+                    return TRUE;
+                default:
+                    ExitProcess(0);
+                    return FALSE;
+                }
+            }
 
-typedef struct {
-    int offset;
-    LPWSTR string;
-} LyricLine;
+            typedef struct {
+                int offset;
+                LPWSTR string;
+            } LyricLine;
 
-#define M(m) 0x##m,
-#define L(m) 0x40##m,
-#define S(s) -s,
-INT messages[] = {'''
+            #define M(m) 0x##m,
+            #define L(m) 0x40##m,
+            #define S(s) -s,
+            INT messages[] = {'''
+        )
         super(MusicToMidiC, self).run()
-        print >>self.stream, '''
-};
-#undef M
-#undef L
-#undef S
+        print >>self.stream, dedent('''
+            };
+            #undef M
+            #undef L
+            #undef S
 
-static LyricLine lyrics[] = {'''
+            static LyricLine lyrics[] = {'''
+        )
         for id, string in self.to_print:
             print >>self.stream, '\t{%d, L"%s"},' % (id, string)
-        print >>self.stream, '''\
-};
+        print >>self.stream, dedent('''\
+            };
 
-DWORD lyrics_count = %d;
+            DWORD lyrics_count = %d;
 
-VOID WriteText(LPWSTR text) {''' % len(self.to_print)
+            VOID WriteText(LPWSTR text) {''' % len(self.to_print)
+        )
         if self.rawapi:
-            print >>self.stream, '''\
-    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD count = WideCharToMultiByte(CP_OEMCP, 0, text, -1, NULL, 0, NULL, NULL);
-    LPSTR storage = (LPSTR) HeapAlloc(GetProcessHeap(), 0, count);
-    if (storage) {
-        if (WideCharToMultiByte(CP_OEMCP, 0, text, -1, storage, count, NULL, NULL)) {
-            WriteFile(hStdout, storage, lstrlenA(storage), &count, NULL);
-        }
-        HeapFree(GetProcessHeap(), 0, storage);
-    }'''
+            print >>self.stream, dedent('''\
+                HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+                DWORD count = WideCharToMultiByte(CP_OEMCP, 0, text, -1, NULL, 0, NULL, NULL);
+                LPSTR storage = (LPSTR) HeapAlloc(GetProcessHeap(), 0, count);
+                if (storage) {
+                    if (WideCharToMultiByte(CP_OEMCP, 0, text, -1, storage, count, NULL, NULL)) {
+                        WriteFile(hStdout, storage, lstrlenA(storage), &count, NULL);
+                    }
+                    HeapFree(GetProcessHeap(), 0, storage);
+                }
+            }''')
         else:
-            print >>self.stream, '    wprintf(L"%s", text);'
-        print >>self.stream, '''\
-}
-
-DWORD WINAPI ThreadProc(LPVOID lpParameter) {
-    DWORD i;
-    BOOL has_lyrics = lyrics_count != 0;
-    DWORD lyric_id = 0;
-    DWORD offset;
-    if (has_lyrics)
-        offset = lyrics[0].offset;
-    for (i = 0; i < %d; ++i) {
-        if (has_lyrics && lyric_id < lyrics_count) {
-            if (i >= offset) {
-                WriteText(lyrics[lyric_id++].string);
-                offset = lyrics[lyric_id].offset;
-            }
-        }
-        if (messages[i] < 0) {
-            int time = -messages[i];
-            int period;
-            if (time < 2)
-                period = 1;
-            else if (time < 10)
-                period = 2;
-            else if (time < 30)
-                period = 5;
-            else if (time < 50)
-                period = 10;
-            
-            timeBeginPeriod(period);
-            Sleep(time);
-            timeEndPeriod(period);
-        } else
-            midiOutShortMsg(handle, messages[i]);
-    }
-    for (; lyric_id < lyrics_count; ++lyric_id) {
-        WriteText(lyrics[lyric_id].string);
-    }
-    midiOutClose(handle);
-    return 0;
-}''' % self.message
+            print >>self.stream, '    wprintf(L"%s", text);\n}'
+        print >>self.stream, dedent('''
+            DWORD WINAPI ThreadProc(LPVOID lpParameter) {
+                DWORD i;
+                BOOL has_lyrics = lyrics_count != 0;
+                DWORD lyric_id = 0;
+                DWORD offset;
+                if (has_lyrics)
+                    offset = lyrics[0].offset;
+                for (i = 0; i < %d; ++i) {
+                    if (has_lyrics && lyric_id < lyrics_count) {
+                        if (i >= offset) {
+                            WriteText(lyrics[lyric_id++].string);
+                            offset = lyrics[lyric_id].offset;
+                        }
+                    }
+                    if (messages[i] < 0) {
+                        int time = -messages[i];
+                        int period;
+                        if (time < 2)
+                            period = 1;
+                        else if (time < 10)
+                            period = 2;
+                        else if (time < 30)
+                            period = 5;
+                        else if (time < 50)
+                            period = 10;
+                        
+                        timeBeginPeriod(period);
+                        Sleep(time);
+                        timeEndPeriod(period);
+                    } else
+                        midiOutShortMsg(handle, messages[i]);
+                }
+                for (; lyric_id < lyrics_count; ++lyric_id) {
+                    WriteText(lyrics[lyric_id].string);
+                }
+                midiOutClose(handle);
+                return 0;
+            }''' %
+            self.message
+        )
 
 def main():
     import sys
