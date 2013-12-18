@@ -2,3 +2,8 @@
 /*.exe
 /*.obj
 /*.c
+
+/*.def
+
+/*.exp
+/*.lib
