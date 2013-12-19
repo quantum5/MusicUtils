@@ -178,7 +178,6 @@ class MusicToMidiC(Parser):
             } LyricLine;
 
             #define M(m) 0x##m,
-            #define L(m) 0x40##m,
             #define S(s) -s,
             INT messages[] = {'''
         )
@@ -186,7 +185,6 @@ class MusicToMidiC(Parser):
         print >>self.stream, dedent('''
             };
             #undef M
-            #undef L
             #undef S
 
             static LyricLine lyrics[] = {'''
@@ -260,11 +258,15 @@ class MusicToMidiC(Parser):
 
 def main():
     import sys
+    import os
     import codecs
     
     for file in sys.argv[1:]:
         try:
-            converter = MusicToMidiC(open(file), codecs.open(file.rsplit('.', 1)[0]+'.c', 'wb', 'utf-8'), rawapi=True)
+            save = codecs.open(os.path.splitext(file)[0] + '.c', 'wb', 'utf-8')
+            if os.name == 'nt':
+                save.write(u'\uFEFF') # So VC picks it up
+            converter = MusicToMidiC(open(file), save, rawapi=True)
         except IOError as e:
             print e.message, 'on opening:', file
         else:
