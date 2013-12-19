@@ -240,6 +240,8 @@ class MusicToMidiC(Parser):
                             period = 5;
                         else if (time < 50)
                             period = 10;
+                        else
+                            period = 15;
                         
                         timeBeginPeriod(period);
                         Sleep(time);
