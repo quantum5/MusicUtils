@@ -81,14 +81,17 @@ class Parser(object):
         
         with self.file as file:
             for line in file:
-                if line == '\n' or line.startswith((';', '#')):
+                if not line or line.isspace() or line.startswith((';', '#')):
                     continue
                 if line[0] in self.filter:
                     continue
                 if line[0] in self.strip:
                     line = line[1:].lstrip()
+                line = line.rstrip('\r\n')
+                if not isinstance(line, unicode):
+                    line = line.decode('utf-8', 'ignore')
                 try:
-                    self.line(line.rstrip('\n').decode('utf-8', 'ignore'))
+                    self.line(line)
                 except KeyboardInterrupt:
                     print '^C Interrupted'
                 except Exception:

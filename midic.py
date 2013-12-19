@@ -1,8 +1,16 @@
 from midi import miditable, instruments, dynamics
 from musicparser import Parser
+import codecs
 
 import sys
 from textwrap import dedent
+
+def ccharrefreplace_errors(exc):
+    if not isinstance(exc, UnicodeEncodeError):
+        raise exc
+    return u'\\u%04x' % ord(exc.object[exc.start]), exc.start + 1
+
+codecs.register_error('ccharrefreplace', ccharrefreplace_errors)
 
 class MusicToMidiC(Parser):
     def __init__(self, file, stream=None, rawapi=False):
@@ -46,12 +54,8 @@ class MusicToMidiC(Parser):
         self.to_print.append((self.message, new.replace('"', '\\"')
                                                .replace('\n', '\\n')
                                                .replace('\b', '\\b')
-                                               .replace('\r', '\\r')))
-        return
-        print >>self.stream, '\tprintf("%%s", "%s");' % (new.replace('"', '\\"')
-                                             .replace('\n', '\\n')
-                                             .replace('\b', '\\b')
-                                             .replace('\r', '\\r'))
+                                               .replace('\r', '\\r')
+                                               .encode('ascii', 'ccharrefreplace')))
     
     def dynamic(self, new, channel):
         try:
@@ -259,18 +263,28 @@ class MusicToMidiC(Parser):
 def main():
     import sys
     import os
-    import codecs
+    import argparse
     
-    for file in sys.argv[1:]:
-        try:
-            save = codecs.open(os.path.splitext(file)[0] + '.c', 'wb', 'utf-8')
-            if os.name == 'nt':
-                save.write(u'\uFEFF') # So VC picks it up
-            converter = MusicToMidiC(open(file), save, rawapi=True)
-        except IOError as e:
-            print e.message, 'on opening:', file
+    parser = argparse.ArgumentParser(description='''
+        Converts the custom music format into a C file playing MIDI.''')
+    parser.add_argument('file', help='Music file.', nargs='?')
+    parser.add_argument('save', help='C file to generate.', nargs='?')
+    parser.add_argument('-r', '--raw', help='Use raw Win32 API.',
+                        action='store_true')
+    args = parser.parse_args()
+
+    try:
+        if args.file is not None:
+            file = codecs.open(args.file, 'r', 'utf-8')
+            save = codecs.open(os.path.splitext(args.file)[0] + '.c', 'w', 'utf-8')
         else:
-            converter.run()
+            file = sys.stdin
+            save = sys.stdout
+    except IOError as e:
+        print e.message, 'on opening:', e.filename
+    else:
+        converter = MusicToMidiC(file, save, rawapi=args.raw)
+        converter.run()
 
 if __name__ == '__main__':
     main()
